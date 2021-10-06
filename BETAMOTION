@@ -1,0 +1,31 @@
+import RPi.GPIO as GPIO
+import dht11
+import time
+from datetime import datetime
+
+# initialize GPIO
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+PIR_PIN=21
+GPIO.setup(PIR_PIN, GPIO.IN)
+#GPIO.cleanup()
+
+# read data using Pin GPIO6 
+instance = dht11.DHT11(pin=6)
+
+timeout= 10 # time in seconds simulation will last
+print('starting up the PIR Module (click on STOP to exit)')
+time.sleep(1)
+print('ready')
+
+timeout_start = time.time()
+with open('dht11.txt','w') as out_file:
+  while time.time() < timeout_start + timeout :
+        result = instance.read()
+        if GPIO.input(PIR_PIN):
+            print('Motion Detected')
+        now = str(datetime.now())
+        if result.is_valid():
+            print("%dC" % result.temperature +','+"%d%%" % result.humidity+ ',' + '\n')
+        out_file.write("%dC" % result.temperature +','+"%d%%" % result.humidity + ','+'\n' )
+        time.sleep(.5) 
