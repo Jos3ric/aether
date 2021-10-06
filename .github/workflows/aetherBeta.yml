@@ -1,0 +1,27 @@
+import RPi.GPIO as GPIO
+import dht11
+import time
+from datetime import datetime
+
+# initialize GPIO
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+#GPIO.cleanup()
+
+# read data using Pin GPIO6 
+instance = dht11.DHT11(pin=6)
+
+timeout= 10 # time in seconds simulation will last
+
+
+timeout_start = time.time()
+with open('dht11.txt','w') as out_file:
+
+
+    while time.time() < timeout_start + timeout :
+        result = instance.read()
+        now = str(datetime.now())
+        if result.is_valid():
+            print("%dC" % result.temperature +' '+"%d%%" % result.humidity + ' ' +':' + now + '\n')
+        out_file.write("%dC" % result.temperature +' '+"%d%%" % result.humidity + ' ' +':' + now + '\n' )
+        time.sleep(.5) # sensor reading  every .5 sec
