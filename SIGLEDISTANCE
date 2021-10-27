@@ -1,0 +1,21 @@
+const int trig = 4, echo = 5;
+long duration, Distanceincm, Distanceininch;
+void setup() {
+  Serial.begin(9600);
+  pinMode(trig, OUTPUT);
+  pinMode(echo, INPUT);
+}
+
+void loop() {
+  digitalWrite(trig, HIGH);
+  delay(15);
+  digitalWrite(trig, LOW);
+  duration = pulseIn(echo, HIGH);
+  Distanceincm = duration / 58;  // time to centimetres
+  Distanceininch = duration / 148; // time to inches
+  Serial.print("Distance in cm = ");
+  Serial.print(Distanceincm);
+  Serial.print("   Distance in inches = ");
+  Serial.println(Distanceininch);
+  delay(500);
+}
