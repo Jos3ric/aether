@@ -1,0 +1,137 @@
+//2XULTRASONIC
+int maxPeople = 6; // maximum number of people allowed before the alarm goes off
+int sensitivity = 5; //lower values will make it more sensitive and higher values will make it less sensitive
+int currentPeople = 0;
+int buzzer = 8;
+int sensor1[] = {2,3};
+int sensor2[] = {4,5};
+int sensor1Initial;
+int sensor2Initial;
+int timeoutCounter = 0;
+
+String sequence = "";
+
+
+//---------------------------------------------------
+
+//DHT11
+#include <dht.h>
+#define dht_apin 2
+dht DHT;
+
+
+//---------------------------------------------------
+
+
+//MQ2
+#define         MQ_PIN                       (A0)    
+#define         RL_VALUE                     (5)     
+#define         RO_CLEAN_AIR_FACTOR          (9.83)  
+ 
+/**********************Software Related Macros***********************************/
+#define         CALIBARAION_SAMPLE_TIMES     (50)    
+#define         CALIBRATION_SAMPLE_INTERVAL  (500) 
+#define         READ_SAMPLE_INTERVAL         (500)   
+#define         READ_SAMPLE_TIMES            (5)     
+ 
+/*********************Application Related Macros*********************************/
+#define         GAS_LPG                      (0)
+#define         GAS_CO                       (1)
+#define         GAS_SMOKE                    (2)
+ 
+/****************************Globals**********************************************/
+float           LPGCurve[3]  =  {2.3,0.21,-0.47};   
+float           COCurve[3]  =  {2.3,0.72,-0.34};     
+float           SmokeCurve[3] ={2.3,0.53,-0.44};    
+                                                    
+float           Ro           =  10;                 
+
+void setup() {
+  //
+  Serial.begin(9600);
+  pinMode(buzzer, OUTPUT);
+
+  delay(500);
+  sensor1Initial = measureDistance(sensor1);
+  sensor2Initial = measureDistance(sensor2);
+  Serial.print("Calibrating...\n");                
+  Ro = MQCalibration(MQ_PIN);
+  Serial.print("Calibration is done...\n"); 
+  Serial.print("Ro=");
+  Serial.print(Ro);
+  Serial.print("kohm");
+  Serial.print("\n");
+
+}
+
+void loop() {
+
+  //Read ultrasonic sensors
+  int sensor1Val = measureDistance(sensor1);
+  int sensor2Val = measureDistance(sensor2);
+  
+  //Process the data
+  if(sensor1Val < sensor1Initial - 20 && sequence.charAt(0) != '1'){
+    sequence += "1";
+  }else if(sensor2Val < sensor2Initial - 20 && sequence.charAt(0) != '2'){
+    sequence += "2";
+  }
+  
+  if(sequence.equals("12")){
+    currentPeople++;  
+    sequence="";
+    delay(550);
+  }else if(sequence.equals("21") && currentPeople > 0){
+    currentPeople--;  
+    sequence="";
+    delay(550);
+  }
+
+  //Resets the sequence if it is invalid or timeouts
+  if(sequence.length() > 2 || sequence.equals("11") || sequence.equals("22") || timeoutCounter > 200){
+    sequence="";  
+  }
+
+  if(sequence.length() == 1){ //
+    timeoutCounter++;
+  }else{
+    timeoutCounter=0;
+  }
+DHT.read11(dht_apin);
+Serial.print(DHT.temperature);
+Serial.print("C,  ");
+Serial.print(DHT.humidity);
+Serial.print("%,  ");
+Serial.print(currentPeople);
+Serial.print("    ");
+Serial.print("CO:"); 
+Serial.print(MQGetGasPercentage(MQRead(MQ_PIN)/Ro,GAS_CO) );
+Serial.print( "ppm" );
+Serial.print("\n");
+
+  //If the number of people is too high, trigger the buzzer
+  if(currentPeople > maxPeople){
+    tone(buzzer, 1700);  
+  }else{
+    noTone(buzzer);  
+  }
+}
+
+//Returns the distance of the ultrasonic sensor that is passed in
+//a[0] = echo, a[1] = trig
+int measureDistance(int a[]) {
+  pinMode(a[1], OUTPUT);
+  digitalWrite(a[1], LOW);
+  delayMicroseconds(2);
+  digitalWrite(a[1], HIGH);
+  delayMicroseconds(10);
+  digitalWrite(a[1], LOW);
+  pinMode(a[0], INPUT);
+  long duration = pulseIn(a[0], HIGH, 100000);
+  return duration / 29 / 2;
+}
+float MQResistanceCalculation(int raw_adc)
+{
+  return ( ((float)RL_VALUE*(1023-raw_adc)/raw_adc));
+}
+ 
